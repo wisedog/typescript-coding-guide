@@ -529,6 +529,60 @@ if (hasQuestion) {
 }
 ```
 
+#### Rule EX-1-2(필수): 부동 소수점의 값을 직접 비교하지 마세요.
+
+JavaScript에서 숫자는 IEEE 754 표준의 64비트 부동소수점 형식으로 저장하고 표현합니다. 쉽게 말하자면 컴퓨터에서는 부동 소수점을 정확한 값이 아닌 근사값으로 저장할 수 밖에 없는 구조적 한계가 있어서 그렇습니다. 상세 설명은 제가 적은 이 [문서](https://www.wisewiredbooks.com/csbooks/ch2-computer-basic/section3-base-notation.html#%EB%B6%80%EB%8F%99-%EC%86%8C%EC%88%98%EC%A0%90)를 참고하시기 바랍니다.
+
+이 때문에 굉장히 직관적이고 간단한 연산에도 예상치 못한 결과를 받아보곤 합니다.
+
+```ts
+const a = 0.1 + 0.2; // 실제 결과: 0.30000000000000004
+console.log(a === 0.3); // false
+```
+
+사람에게 0.1 + 0.2 를 더하면 얼마인지 물어보면 산수를 하실줄 아는 사람이라면 모두 0.3이라고 대답하겠지만 컴퓨터에게는 좀 어려운 문제입니다. 비단 JavaScript 만의 문제는 아니고 부동 소수점을 IEEE 754 표준을 따르는 모든 시스템에서 벌어지는 문제이기 때문에 낙담할 필요는 없습니다. 따라서 컴퓨터는 멍청해서(?) 부동소수점 값 비교를 못한다고 생각하시고 부동소수점 끼리의 값 비교는 허용 오차를 사용하여 비교하시기 바랍니다.
+
+```ts
+function equal(x, y) {
+  return Math.abs(x - y) < Number.EPSILON;
+}
+
+const x = 0.2;
+const y = 0.3;
+const z = 0.1;
+console.log(equal(x + z, y)); // true
+```
+
+이 경우를 위해 JavaScript의 Math 전역 객체에는 `EPSILON`이라는 상수 값을 가지고 있습니다. 이 값은 `2.220446049250313e-16`, JavaScript 의 기본 64비트 실수형 가수부에서 0을 제외하고 가장 작은 숫자입니다. 그 말인 즉슨 `number`타입 `x`가 표현하지 못하는 값인 0 초과 `2.220446049250313e-16` 미만인 값을 무시하기 위함입니다.
+
+다만 이 경우는 1 미만 소수점일때 해당되고 숫자가 커지면 이 코드 역시 문제가 있습니다.
+
+```ts
+function equal(x, y) {
+  return Math.abs(x - y) < Number.EPSILON;
+}
+
+const x = 1000.1;
+const y = 1000.2;
+const z = 2000.3;
+console.log(equal(x + y, z)); // false
+```
+
+위의 경우는 값이 크기 때문에 허용 오차도 같이 커져야합니다.
+
+```ts
+function equal(x, y, tolerance = Number.EPSILON) {
+  return Math.abs(x - y) < tolerance;
+}
+
+const x = 1000.1;
+const y = 1000.2;
+const z = 2000.3;
+console.log(equal(x + y, z, 2000 * Number.EPSILON)); // true
+```
+
+따라서 `Number.EPSILON`값을 절대적으로 신봉하기보다는 이 값을 이해하고 값 범위에 맞춰 위와 같이 사용하시길 바랍니다.
+
 ## 6. 문(Statement, ST)
 
 ### 6.1 일반
@@ -816,6 +870,19 @@ console.log(Object.getPrototypeOf(Array.prototype)); // Object.prototype
 
 게다가 인덱스로 사용하는 0, 1도 문자열로 오기 때문에 탐색에 부적절합니다. 따라서 `for...of` 반복문이나 `Array.prototype.forEach()` 메서드를 사용하여 배열을 순회하시기 바랍니다.
 
+#### Rule ST-3-3(필수): `for` 문에서 숫자 증감을 소수점으로 하지 마세요.
+
+`Rule EX-1-2 부동 소수점의 값을 직접 비교하지 마세요`의 응용편입니다. `for`문은 반복을 한 번 할때마다 그 카운터 값을 증감시키고 이 카운터 값을 비교함으로서 반복을 유지할지 계속할지를 결정합니다. 그런데 이 값이 소수점이라면 제대로 비교를 할 수 없습니다.
+
+```ts
+for (let i = 0.0; i < 10; i += 0.1) {
+  // ....
+}
+```
+
+아래와 같은 버그를 겪을 수도 있으니, 반드시 숫자 증감을 정수로만 하시기 바랍니다.
+![버그 사례](./images/st-3-3-1.png)
+
 ### 6.4 if
 
 TODO
@@ -1048,6 +1115,47 @@ eval('console.log("hello")');
 3. 가독성 및 유지보수의 어려움
    `eval()`을 사용하면 코드의 동작을 한 눈에 파악할 수 없고 특히나 외부에서 오는 코드에 의존적일 경우 유지보수가 더욱 힘듭니다.
 4. 엄격한 `Content Security Policies`가 적용될 경우에는 실행되지 않습니다.
+
+#### Rule SD-3-2(권장): 객체 깊은 복사가 필요할 때 `structuredClone()`을 사용하세요
+
+개발을 하다보면 객체를 깊은 복사(Deep Copy)해야할 때가 있습니다. 아래처럼 하는건 얕은 복사(Shallow Copy)입니다.
+
+```ts
+const x = { a: 1 }; // 예제라서 타입 정의 생략
+const y = x;
+y.a = 2;
+console.log(x, y);
+// { "a": 2 }, { "a": 2 }
+```
+
+얕은 복사는 객체의 레퍼런스만 할당하기 때문에 - 즉 `x`와 `y`는 같은 객체를 가리키기 때문에 `y`의 속성을 변경하면 `x`의 속성도 변경됩니다. 따라서 깊은 복사 시에는 아래와 같은 코드를 많이 사용했었습니다.
+
+```ts
+const clone = JSON.parse(JSON.stringify(x));
+```
+
+이 경우 `x`의 타입이 유실되면서 `any`타입으로 변경되고, TypeScript의 타입 체킹 지원을 못받게 됩니다. 이 때문에 깊은 복사는 써드파티 라이브러리인 `lodash`의 `cloneDeep()` 메서드를 사용하곤 했는데요, Node 17, Chrome 98, Firefox 94 버전부터 지원한 `structuredClone()`을 사용하면 깊은 복사를 손쉽게 할 수 있으며 타입도 유실되지 않기 때문에 TypeScript의 타입 지원도 받을 수 있습니다.
+
+```ts
+const clone = structuredClone(x);
+```
+
+하지만 이도 만능은 아닙니다. 객체에 함수가 있으면 `DataCloneError` 예외가 발생합니다. 아래는 `structuredClone()`에서 지원하는 데이터 타입입니다.
+
+- Array
+- ArrayBuffer
+- Boolean
+- DataView
+- Date
+- Error ( Error, EvalError, RangeError, ReferenceError, SyntaxError, TypeError, URIError 만 지원)
+- Map
+- Number
+- Object 객체: 객체 리터럴같은 일반 객체만 지원합니다.
+- Symbol을 제외한 원시 타입
+- RegExp: `lastIndex` 값은 보존되지 않습니다.
+- Set
+- String
+- TypedArray
 
 ## 10. 주석(Comment, CM)
 
