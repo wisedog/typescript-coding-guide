@@ -138,7 +138,7 @@ const greeting1 = 'hi';
 const greeting2 = new String('hi');
 ```
 
-사유: 래퍼 객체를 사용할 경우 몇 가지 문제점이 있습니다.
+하지만 래퍼 객체를 사용할 경우 몇 가지 문제점이 있습니다.
 
 첫 번째, 예상치 못한 동작을 마주할 수 있습니다. 예를 들어 아래 코드를 살펴보겠습니다.
 
@@ -583,6 +583,18 @@ console.log(equal(x + y, z, 2000 * Number.EPSILON)); // true
 
 따라서 `Number.EPSILON`값을 절대적으로 신봉하기보다는 이 값을 이해하고 값 범위에 맞춰 위와 같이 사용하시길 바랍니다.
 
+#### Rule EX-1-3(권장, 완): 단항 증가(unary plus, +) 연산자를 조심히 사용하세요
+
+문자열로 표현된 숫자(예: "123")을 숫자로 바꾸기 위해 단항 증가 연산자를 사용하는 경우가 있습니다. 간편하고 코드도 간단해진다는게 그 이유입니다.
+
+```ts
+const someValue = +strMyNumber + 17274;
+```
+
+하지만 숫자 파싱이 실패할 경우 `NaN`을 반환하기 때문에 위 코드에서 `aaa`, `123f`등의 문자열이 들어오면 단항 증가 연산의 결과는 `NaN`이 되며 여기에 무슨 값을 더하건 다 `NaN`이 됩니다.
+
+문자열로 표현된 숫자가 확실한 경우 사용해도 되겠지만, 만약 `strMyNumber`가 외부로부터 입력된 값일 경우에는 절대 사용하지 마시거나 미리 정규표현식으로 숫자를 표현한 문자열임을 확인 후 사용하시기 바랍니다.
+
 ## 6. 문(Statement, ST)
 
 ### 6.1 일반
@@ -893,7 +905,46 @@ TODO
 
 ## 8. 에러 처리(Error Handling, ER)
 
-TODO
+#### Rule EH-1-1(권장): `catch`절은 비워두지 마세요.
+
+`try...catch`의 `catch`절은 `try` 절 내 복합문 내에서 예외가 발생하면 이를 받아서 처리하는 로직이 담겨있습니다. 따라서 `try`를 쓴 이상 아래 코드처럼 `catch`절이 비어 있다는 것은 말이 안된다고 볼 수 있겠습니다.
+
+```ts
+try {
+  someFunc();
+} catch (err: unknown) {}
+```
+
+만약 `try`절 내에서 발생한 예외가 굳이 로직을 정지시킬 필요가 없어서 `catch`절에 적을 로직이 없다면 주석이라도 달아두셔야 합니다.
+
+```ts
+try {
+  someFunc();
+} catch (err: unknown) {
+  // someFunc()에서 발생한 TypeError는 동작에 영향을 끼치지 않기에 그냥 넘어간다
+}
+```
+
+#### Rule EH-1-2(필수): 예외 값은 Error 만 사용하세요.
+
+`throw` 혹은 프로미스의 `reject`는 `Error`타입의 값으로만 예외를 발생할 수 있는 것은 아닙니다. 문자열이나 숫자 혹은 어떠한 값이라도 예외 혹은 프로미스의 `reject`의 값이 될 수 있습니다.
+
+```ts
+throw 'hello';
+throw 123;
+
+new Promise((resolve, reject) => reject('hello'));
+new Promise((resolve, reject) => reject(123));
+```
+
+그러나 예외가 발생한 값이나 거부된 값이 `Error`가 아닌 경우 스택 추적 정보를 채우지 않습니다. 스택 추적 정보는 디버깅에 중요한 정보이기 때문에 `Error` 혹은 이를 상속한 클래스의 값으로 예외를 발생시키거나 프로미스의 `reject`의 값으로 사용하시기 바랍니다.
+
+```ts
+class NotFoundException extends Error {}
+
+throw new NotFoundException('Not Found');
+new Promise((resolve, reject) => reject(new Error('hello')));
+```
 
 ## 9. 표준 내장 객체 및 함수(Standard Built-in Objects/Functions, SD)
 
@@ -1083,16 +1134,50 @@ testSideEffect((arr, index) => {
 이처럼 내부에서 요소를 추가/삭제하는 행위는 그 결과를 예측하기 힘들기 때문에 사용하지 마시기 바랍니다.
 
 참고1. 순회 `Array` 메서드
-[`Array.prototype.every()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/every)
-[`Array.prototype.filter()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/filter)
-[`Array.prototype.find()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/find)
-[`Array.prototype.findIndex()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/findIndex)
-[`Array.prototype.findLast()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/findLast)
-[`Array.prototype.findLastIndex()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/findLastIndex)
-[`Array.prototype.flatMap()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/flatMap)
-[`Array.prototype.forEach()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach)
-[`Array.prototype.map()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/map)
-[`Array.prototype.some()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/some)
+
+- [`Array.prototype.every()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/every)
+- [`Array.prototype.filter()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/filter)
+- [`Array.prototype.find()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/find)
+- [`Array.prototype.findIndex()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/findIndex)
+- [`Array.prototype.findLast()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/findLast)
+- [`Array.prototype.findLastIndex()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/findLastIndex)
+- [`Array.prototype.flatMap()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/flatMap)
+- [`Array.prototype.forEach()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach)
+- [`Array.prototype.map()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/map)
+- [`Array.prototype.some()`](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/some)
+
+#### Rule SD-2-7(권장): `Array` 메서드 사용시 가능하면 불변을 유지하는 메서드를 사용하세요.
+
+2023년 7월 이후로 `Array`에 아래와 같은 새로운 메서드가 추가되었습니다.
+
+- Array.prototype.toReversed()
+- Array.prototype.toSorted()
+- Array.prototype.toSpliced()
+
+이는 각각 `Array.prototype.reverse()`, `Array.prototype.sort()`, `Array.prototype.splice()`의 또 다른 버전입니다. 크게 다른 점은 호출한 원본 배열을 변경시키는 기존 메서드와는 달리 기존 배열을 변경시키지 않고 메서드가 처리한 결과값을 복사본으로 반환합니다.
+
+기존 배열은 불변한다는 이점이 있으니 `Array.prototype.reverse()`, `Array.prototype.sort()`, `Array.prototype.splice()`대신 해당 메서드를 권장합니다.
+
+#### Rule SD-2-8(필수): 전역 함수보다는 `Number` 전역 객체의 함수를 사용하세요.
+
+JavaScript의 초기 설계 이슈 문제로 숫자를 다루는 `parseInt()`, `parseFloat()`등의 함수와 `Infinity`와 같은 상수가 전역 함수 및 상수로 정의되었습니다. JavaScript가 이렇게 흥할지 모르고 가벼운 마음에 이렇게 설계했지만 웹을 지탱하는 언어가 된 이후로는 네임스페이스 오염, 일관성 부족 등 많은 문제를 야기했습니다.
+
+이 문제를 알고있었기에 ES6 이후로는 `Number` 전역 객체가 이를 모두 커버하게 되었습니다. 아래 전역 함수는 모두 `Number` 전역 객체의 메서드 혹은 상수의 값을 사용하시기 바랍니다.
+
+- `parseInt()` 대신 `Number.parseInt()`
+- `parseFloat()` 대신 `Number.parseFloat()`
+- `isNan()` 대신 `Number.isNan()`
+- `isFinite()` 대신 `Number.isFinite()`
+- `Infinity` 대신 `Number.POSITIVE_INFINITY`
+- `-Infinity` 대신 `Number.NEGATIVE_INFINITY`
+
+#### Rule SD-2-9(필수): `String` 전역 객체의 `trimLeft()`, `trimRight()`보다 `trimStart()`, `trimEnd()`를 사용하세요.
+
+`String.prototype.trimLeft()`, `String.prototype.trimRight()` 보다 `String.prototype.trimStart()`, `String.prototype.trimEnd()`를 사용하세요.
+
+과거에는 문자열 시작과 끝의 공백 등의 문자를 정리하기 위해 `trimLeft()`, `trimRight()`가 있었습니다. 하지만 이 API 명 자체가 좌에서 우로 쓰는 영어 등의 언어 등에 맞춰져 있기 때문에 아랍어와 같이 우에서 좌로 사용하는 언어에 사용하거나, 세로쓰기일 경우 그 뜻이 모호한 문제가 있었습니다. 마침 `padStart()`, `padEnd()`가 표준으로 채택되면서 이 API와의 일관성을 맞출 필요가 생겼습니다. 마침내 ES2019에서 `trimStart()`와 `trimLeft()`를 언급하면서, `trimStart()` 사용을 권장하게 되었습니다.
+
+일부 JS 엔진은 `trimLeft()`, `trimRight()`를 그저 `trimStart()`, `trimEnd()`의 별칭(alias)으로만 사용하기도 합니다.
 
 ### 9.3 표준 내장 함수
 
@@ -1108,12 +1193,9 @@ eval('console.log("hello")');
 
 사용하지 않아야 하는 이유 중 보안이 가장 크고 절대적이지만 추가적으로 몇 가지 이유를 더 들겠습니다.
 
-1. 성능 저하
-   JavaScript 엔진은 코드를 실행 전 최적화를 수행합니다. 하지만 `eval()`에서 실행하는 코드는 최적화가 어렵기 때문에 성능 저하가 있을 수 있습니다.
-2. 디버깅 및 정적 코드 분석의 어려움
-   `eval()`은 실행 중에 코드를 동적으로 생성하고 실행하기 때문에 디버깅도 어렵고 각종 정적 분석 도구의 지원을 받을 수 없습니다.
-3. 가독성 및 유지보수의 어려움
-   `eval()`을 사용하면 코드의 동작을 한 눈에 파악할 수 없고 특히나 외부에서 오는 코드에 의존적일 경우 유지보수가 더욱 힘듭니다.
+1. 성능 저하: JavaScript 엔진은 코드를 실행 전 최적화를 수행합니다. 하지만 `eval()`에서 실행하는 코드는 최적화가 어렵기 때문에 성능 저하가 있을 수 있습니다.
+2. 디버깅 및 정적 코드 분석의 어려움: `eval()`은 실행 중에 코드를 동적으로 생성하고 실행하기 때문에 디버깅도 어렵고 각종 정적 분석 도구의 지원을 받을 수 없습니다.
+3. 가독성 및 유지보수의 어려움: `eval()`을 사용하면 코드의 동작을 한 눈에 파악할 수 없고 특히나 외부에서 오는 코드에 의존적일 경우 유지보수가 더욱 힘듭니다.
 4. 엄격한 `Content Security Policies`가 적용될 경우에는 실행되지 않습니다.
 
 #### Rule SD-3-2(권장): 객체 깊은 복사가 필요할 때 `structuredClone()`을 사용하세요
