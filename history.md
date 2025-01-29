@@ -2,6 +2,16 @@
 
 ## 수정 내역
 
+- v0.6: 규칙 7개 추가
+
+  - Rule ST-3-4(필수): for 문에서 반복 카운터로 사용하는 숫자 변수를 내부에서 변화시키지 마세요
+  - Rule ST-3-5(권장): 배열을 순회할 목적이면 for 문 대신 `for...of`, `Array.prototype.forEach()`를 사용하십시오
+  - Rule ST-4-1(권장): 3개 이상의 조건은 지양하세요
+  - Rule ST-4-2(권장): 조건에 부정 연산자, 부정적 의미를 담은 식별자는 최소한으로 사용하세요.
+  - Rule EX-1-4(필수): `new` 연산자로 객체를 생성하세요.
+  - Rule SD-2-10(권장): 해시맵이 필요할 때 `Object`대신 `Record` 혹은 `Map`을 사용하세요.
+  - Rule SD-2-11(권장): Unix Time Epoch를 구할때 `Date.now()`를 사용하세요.
+
 - v0.5: 규칙 6개 추가
 
   - Rule EX-1-3(권장): 단항 증가(unary plus, +) 연산자를 조심히 사용하세요
@@ -46,7 +56,7 @@
   - Rule SD-2-2(필수): `Array.prototype.map()`의 반환 값을 반드시 사용하세요
   - Rule SD-2-3(필수): `Array` 생성자를 사용하지 마세요
   - Rule SD-2-4(필수): `Array.prototype.forEach()` 내에서 값을 반환하지 마세요.
-  - Rule SD-2-5(필수): `Array.prototype.forEach()`에서 await 를 사용하지 마세요
+  - Rule SD-2-5(필수): `Array.prototype.forEach()`에서 `await` 를 사용하지 마세요
   - Rule SD-2-6(필수): `Array` 순회 가능한 메서드의 콜백 함수 내에서 대상 Array 값을 수정하지 마세요
   - Rule SD-3-1(필수): `eval()`을 사용하지 마세요
   - Rule EV-2-1(필수): 소스코드는 `UTF-8`인코딩으로 저장되어야 합니다.
