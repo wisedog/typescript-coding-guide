@@ -258,7 +258,7 @@ const y: number | undefined = undefined;
 
 `undefined`과 `null` 모두 [거짓같은 값(Falsy)](https://developer.mozilla.org/ko/docs/Glossary/Falsy)이기 때문에 `if`문으로 값의 존재 유무를 확인하는데는 아무 문제 없지만, ORM류의 특정 라이브러리에서는 문제가 될 수 있습니다. 예를 들어 테이블 레코드 업데이트나 삽입 시에 속성이 `undefined`라면 이 값을 업데이트나 삽입 시에 제외시키지만, `null`이라면 테이블의 해당 컬럼 값을 `null`로 처리해버립니다.
 
-#### Rule TP-2-2(필수): 타입 별칭에 `null`이나 `undefined`을 포함하지 마세요
+#### Rule TP-2-2(필수): 타입 별칭에 `null`이나 `undefined`을 포함하지 마세요.
 
 타입 별칭(`type`)에 union 타입으로 `null`이나 `undefined`이 포함되서는 안됩니다.
 
@@ -471,7 +471,7 @@ let z = 3; // 좌표의 Z-Index
 
 여러 변수를 한 줄에 선언하면 변수 이름을 `x`, `i` 와 같이 짧고 뜻을 이해하게 짓는 경향이 있습니다. 게다가 변수를 한 줄에 하나씩 선언하는 것보다 읽고 이해하기가 힘들기 때문에 여러 명이 작업하는 프로젝트에서는 필히 한 줄에 하나의 변수를 선언해야 합니다.
 
-## 4. 클래스(Class, CLS)
+## 4. 클래스(Class, CL)
 
 ### 4.1 일반
 
@@ -595,7 +595,7 @@ const someValue = +strMyNumber + 17274;
 
 문자열로 표현된 숫자가 확실한 경우 사용해도 되겠지만, 만약 `strMyNumber`가 외부로부터 입력된 값일 경우에는 절대 사용하지 마시거나 미리 정규표현식으로 숫자를 표현한 문자열임을 확인 후 사용하시기 바랍니다.
 
-#### Rule EX-1-4(필수, 완): `new` 연산자로 객체를 생성하세요.
+#### Rule EX-1-4(필수): `new` 연산자로 객체를 생성하세요.
 
 과거 JavaScript에서는 `new` 없이도 객체를 생성할 수 있었습니다. 그러나 최근의 생성자는 무조건 `new` 연산자로 객체를 생성해야 합니다. 아래와 같은 레거시 생성자는 `new` 없이도 호출은 가능합니다.
 
@@ -606,6 +606,92 @@ const someValue = +strMyNumber + 17274;
 - Array()
 
 그 외에는 모두 `new`와 함께 호출해야 하며 그렇지 않으면 TypeError가 발생합니다. 하지만 일관성을 위해서 위 객체를 포함하여 객체를 생성할때는 모두 `new`를 사용하시기 바랍니다.
+
+#### Rule EX-1-5(필수): 전개 연산자 사용 시 피연산자가 객체 리터럴 혹은 순회 가능한 객체가 와야합니다.
+
+전개(spread, '...') 연산자 사용 시 피연산자가 객체 리터럴 혹은 순회 가능한 객체가 와야합니다. 이 부분은 TypeScript라도 걸러내기 힘들고 런타임 에러가 발생합니다. 특히 `null`, `undefined`이 오지 않도록 조심하세요.
+
+```ts
+const targetIds = [7];
+const totalIds = [5, ...(shouldTotalIds && targetIds)]; // ...의 피연산자는 false
+console.log(bar);
+
+// 출력: (shouldTotalIds && targetIds) is not iterable
+```
+
+다만 이 경우는 배열에 한합니다. 배열에서 `undefined`, `null`, `boolean` 등과 같이 순회 가능한 객체가 오지 않으면 런타임 에러가 발생하는데, 객체 리터럴에서는 그냥 무시합니다.
+
+Nullish coalescing(??) 혹은 OR(||) 연산자 등으로 안전하게 기본값을 설정할 수 있습니다.
+
+#### Rule EX-1-6(필수): 전개 연산자 사용 시 값 덮어쓰기를 주의하세요.
+
+전개 연산자를 사용시 가능하면 다른 속성 정의 혹은 배열 요소보다 먼저 오는게 좋습니다. 의도치않게 기존 값을 덮어 쓸 수 있습니다.
+
+```ts
+const x = {
+  a: 10,
+  b: 7,
+};
+
+const y = {
+  a: 5,
+  ...x,
+};
+
+console.log(y); // { "a": 10, "b": 7 }
+```
+
+`y.a`는 5라고 정의했으나 `x`를 전개연산하는 과정에서 `y.a` 값을 `x.a`의 값으로 덮어 썼습니다. 전개 연산의 순서는 버그의 원인 중 하나이기에 가능하면 아래와 같이 전개연산을 먼저 사용하시기 바랍니다.
+
+```ts
+const x = {
+  a: 10,
+  b: 7,
+};
+
+const y = {
+  ...x,
+  a: 5,
+};
+
+console.log(y); // { "a": 5, "b": 7 }
+```
+
+#### Rule EX-1-7(필수): 전개 연산자 사용 시 같은 타입에 사용하세요
+
+전개 연산자는 객체 리터럴 혹은 순회 가능한 객체(배열 등)에 사용 가능합니다. 그렇기에 객체 리터럴에서 배열을 피연산자로 전개 연산을 사용할 수(!) 있습니다.
+
+```ts
+const k = ['a', 'b', 'c'];
+const y = {
+  a: 5,
+  ...k,
+};
+
+console.log(y); // { "0": "a", "1": "b", "2": "c", "a": 5 }
+```
+
+아마 대부분 원하는 결과가 아닐거라고 생각합니다. 객체 리터럴에 전개 연산자를 사용할때는 피연산자가 객체 리터럴이어야하며, 배열에 전개 연산자를 사용할 때는 피연산자가 배열이어야 합니다.
+
+배열에서 객체 리터럴을 전개 연산자의 피연산자로 사용할 수는 없습니다.
+
+#### Rule EX-1-8(필수): 다차원 배열을 전개 연산자의 피연산자로 사용하지 마세요
+
+전개 연산자는 얕은 복사로 동작하기에 다차원 배열을 복사하는 데 적합하지 않습니다. 다차원 배열은 배열 안에 또 배열의 참조를 들고있기 때문에 만약 배열을 변경시킨다면 원본 배열에 영향이 갑니다.
+
+```ts
+const a = [[1], [2], [3]];
+const b = [...a];
+
+b.shift().shift();
+// 1
+
+// 배열 'a'에 영향이 갑니다.
+console.log(a);
+// [[], [2], [3]]
+```
+
+위 코드에서 `b.shift()`는 `[1]`을 반환하며 `[1]`에 또 다시 `shift()`를 실행하면 `[]`이 됩니다. `a`에는 영향이 없을 걸로 생각할 수 있지만 `b.shift()` 첫 번째에서 `[1]`의 참조를 반환하고 이는 곧 `a[0]`의 참조입니다. 이 참조에서 `shift()`를 통해 첫 번째 요소를 제거하게 되면 `a`의 값인 `1`이 제거됩니다.
 
 ## 6. 문(Statement, ST)
 
@@ -967,9 +1053,60 @@ if (user.authorized || user.isAdmin()) {
 
 아래 코드가 이해하기 훨씬 쉬우실겁니다.
 
+다만 아래와 같이 짧고 직관적인 부정 비교는 괜찮습니다.
+
+```ts
+if (!user.name) {
+  // ....
+}
+```
+
 ## 7. 함수(Function, FC)
 
-TODO
+### 7.1 일반
+
+#### Rule FC-1-1(권장): 매개 변수가 3개 이상인 함수는 구조적 타입으로 매개 변수를 줄여보세요.
+
+함수의 매개변수가 많아지면 가독성이 떨어지며, 순서가 헷갈리면 잘못된 값을 전달할 위험이 있습니다.
+
+```ts
+function sendFAX(
+  CorpNum,
+  Sender,
+  Receiver,
+  ReceiverName,
+  FilePaths,
+  ReserveDT,
+  SenderName,
+  AdsYN,
+  Title,
+  RequestNum,
+  UserID,
+  success,
+  error
+);
+```
+
+위 코드는 제가 버그를 일으킨 써드파티 SDK의 함수 정의입니다. JavaScript로 되어있어서 `.d.ts`를 통해서 타입을 정의하고 구현했는데 13개의 매개 변수 때문인지, 집중력이 떨어졌을때 했는지 결국 버그를 내고 말았습니다.
+
+매개 변수가 3개 이상일 경우 `interface`등의 구조적 타입으로 매개변수를 줄여보세요.
+
+```ts
+interface UserParams {
+  id: number;
+  name: string;
+  age: number;
+}
+
+function createUser({ id, name, age }: UserParams) {
+  return { id, name, age };
+}
+const user = createUser({ id: 1, name: 'Alice', age: 25 });
+```
+
+구조적 타입을 매개변수로 사용하면 여러 이점이 있습니다. 매개변수 순서때문에 발생하는 실수를 방지할 . 수있으며 확장이 용이합니다. 위 코드에서는 `UserParams`에 추가만 하면 됩니다. 또한 선택적 매개변수도 활용 가능하죠.
+
+다만 3개 미만(혹은 이하)일 경우에는 매개변수 타입 정의가 더 비용이 많이 든다는 점 참고하시기 바랍니다.
 
 ## 8. 에러 처리(Error Handling, ER)
 
@@ -1413,7 +1550,17 @@ TODO
 
 ### 11.1 일반
 
-TODO
+#### Rule SC-1-1(필수): 코드 스타일은 일관성이 있어야 합니다.
+
+코드의 겉모습인 '코드 스타일'은 여러가지 요소로 구성되어 있습니다.
+
+- 들여쓰기: 탭, 4줄 띄어쓰기, 2줄 띄어쓰기
+- 따옴표: 홑따옴표, 따옴표
+- 한 줄당 최대 코드 길이: 80칸, 100칸 혹은 120칸 등등
+- 중괄호 위치: if 와 같은 줄인지, 아니면 그 다음 줄인지 등등
+- 특정 위치에 빈 줄 넣기
+
+등등 코드 스타일을 정의하자면 여기서 언급하기 힘들 정도로 많습니다. 이 코드 스타일은 팀 혹은 레포 레벨에서 통일되어야 합니다. 일관되지 않은 코드 스타일로는 협업이 어렵습니다.
 
 ### 11.2 Import
 
@@ -1421,7 +1568,50 @@ TODO
 
 ### 11.3 Export
 
-TODO
+#### Rule SC-3-1(필수): `default export`를 사용하지 마세요.
+
+`export` 방법은 2가지가 있습니다.
+
+```ts
+// default export
+export default class Button {}
+
+// named export
+export class Button {}
+```
+
+Named Export는 한 파일 내에서 여러 개의 변수, 클래스, 함수를 Export 할 수 있는 반면, Default Export는 한 파일 내에서 단 하나의 변수, 클래스, 함수 만을 Export 할 수 있습니다.
+
+이는 import 할때의 차이로 나타납니다.
+
+```ts
+// default  export
+import MyClass from 'foo.ts';
+
+// named export
+import { Button, CheckBox } from 'bar.ts';
+```
+
+Named Export 는 중괄호 사이에 해당 파일에서 export 한 변수, 클래스, 함수를 여러 개 불러올 수 있습니다. import 시 여러 개를 불러올 수 있기 때문에 이름이 중요하기 때문에 export 할때의 식별자를 그대로 적어야 에러가 나지 않습니다.
+
+반면 Default Export는 해당 파일에서 단 하나만 쓸 수 있으며 이 때문에 import 시 이름이 중요하지 않습니다.
+
+```ts
+// foo.ts
+export const xVar;
+export const yVar;
+
+export default MyClass;
+
+// bar.ts
+import { x, y } from 'foo.ts'; // Error
+import { xVar, yVar } from 'foo.ts'; // OK
+
+import YourClass from 'foo.ts'; // OK
+import MyClass from 'foo.ts'; // OK
+```
+
+따라서 named export는 import 시 잘못된 export 를 시도해도 에러가 발생할 수 있는 이점이 있는 반면 default export를 사용 시 유지보수가 어렵고 가독성이 저하될 수 있는 등 상대적으로 문제가 있습니다.
 
 ## 12. 개발 환경(Development Environment, EV)
 
