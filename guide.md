@@ -475,15 +475,33 @@ let z = 3; // 좌표의 Z-Index
 
 ### 4.1 일반
 
-TODO
+#### Rule CL-1-1(필수): `readonly` 를 활용하세요
 
-### 4.2 Constructor
+생성자 외에서 변경하지 않는 멤버 변수(생성자 매개변수 포함)에 `readonly` 를 적극적으로 사용하세요. `readonly` 접근 제어자가 설정된 속성은 재할당이 불가하기에 프로그램의 안정성을 높이는데 도움이 됩니다. 단, 객체의 경우 내부 속성까지 불변은 아니니 참고하시기 바랍니다.
 
-TODO
+```ts
+class Foo {
+  private readonly prop1: string;
 
-### 4.3 Members
+  constructor(private readonly someService: SomeService) {
+    this.prop1 = 3;
+  }
+}
+```
 
-TODO
+#### Rule CL-1-2(권장): `public` 접근 제어자에 일관성이 있어야 합니다.
+
+TypeScript 클래스의 멤버 변수와 메서드의 기본 접근 제어자는 `public` 입니다. 즉 아무 접근 제어자를 명시하지 않으면 `public`이라는 뜻입니다. 프로젝트에서 일관되게 사용하던지 혹은 사용하지 말아야 합니다.
+
+```ts
+class Foo {
+  prop1: string; // public
+  public prop2: string; // public
+
+  add(a: number, b: number): number {} // public
+  public multiply(a: number, b: number): number {} // public
+}
+```
 
 ## 5. 표현식(Expression, EX)
 
@@ -1061,6 +1079,10 @@ if (!user.name) {
 }
 ```
 
+#### Rule ST-4-3(권장): `else if`가 3개 이상이면 `switch` 사용을 고려하세요
+
+`if...else`가 3개 이상 연속된다면 가독성 향상을 위해 `switch`문 사용을 고려해보세요.
+
 ## 7. 함수(Function, FC)
 
 ### 7.1 일반
@@ -1107,6 +1129,47 @@ const user = createUser({ id: 1, name: 'Alice', age: 25 });
 구조적 타입을 매개변수로 사용하면 여러 이점이 있습니다. 매개변수 순서때문에 발생하는 실수를 방지할 . 수있으며 확장이 용이합니다. 위 코드에서는 `UserParams`에 추가만 하면 됩니다. 또한 선택적 매개변수도 활용 가능하죠.
 
 다만 3개 미만(혹은 이하)일 경우에는 매개변수 타입 정의가 더 비용이 많이 든다는 점 참고하시기 바랍니다.
+
+#### Rule FC-1-2(권장): 매개 변수가 객체인 경우 `Readonly` 유틸리티 타입을 사용하세요
+
+매개변수가 객체인 경우 호출한 함수에서 매개 변수의 속성이나 요소를 변경할 경우 원래 값에 영향이 갑니다. 이는 버그를 유발하며 디버깅을 까다롭게 합니다.
+
+```ts
+interface Foo {
+  a: number;
+  b: number;
+}
+
+const bar: Foo = { a: 1, b: 1 };
+const bar2: Foo = { a: 2, b: 2 };
+
+function someFunc(p1: Foo, p2: Foo): number {
+  // a = { a : 4, b: 3};
+  p1.a = -1;
+  return p1.a + p1.a;
+}
+
+console.log(bar, bar2); // bar.a의 값 변경: { "a": -1, "b": 1 }, { "a": 5, "b": 5 }
+```
+
+JavaScript와 달리 TypeScript에서는 `Readonly<T>` 유틸리티 타입을 사용하면 호출한 함수 내에서 매개 변수를 변경하지 못하게 할 수 있습니다. 이런 경우 매개 변수는 불변을 유지할 수 있기 때문에 예상치 못한 부작용을 막을 수 있습니다.
+
+```ts
+interface Foo {
+  a: number;
+  b: number;
+}
+
+const bar: Foo = {
+  a: 1,
+  b: 1,
+};
+
+function add(num: Readonly<Foo>): number {
+  num.a = 4; // ERROR!
+  return num.a + num.b;
+}
+```
 
 ## 8. 에러 처리(Error Handling, ER)
 
@@ -1544,9 +1607,147 @@ const clone = structuredClone(x);
 
 ## 10. 주석(Comment, CM)
 
-TODO
+### 1. 일반
 
-## 11. 소스 코드(SC)
+#### Rule CM-1-1(필수): 클래스 멤버, 클래스 메서드, 함수, 속성 선언 등 에는 TSDoc 형태의 주석을 사용하세요.
+
+모든 프로그래밍 언어에는 주석이 있습니다. JavaScript도 예외는 아닙니다. JavaScript에서 주석의 형태는 아래와 같습니다.
+
+```ts
+// 이것은 주석입니다.
+/*
+이것도 주석입니다.
+*/
+```
+
+여기에 함수, 메서드, 클래스, 변수 선언 위에 JSDoc이라 불리는 특수한 형태의 주석을 달 수 있습니다. `/**`로 시작해서 `*/`로 끝나야 합니다. `/* ... */`과 다르다는 점 유의해주세요.
+
+```js
+/**
+ * Add the given two numbers
+ *
+ * @param {Number} a number to add
+ * @param {Number} b number to add
+ * @return {Number} sum vbalue
+ */
+function sumTwo(a, b) {
+  //....
+}
+```
+
+이 경우 `sumTwo()`함수를 사용할 때 함수 위에 마우스를 호버링하면 매개변수, 반환 타입과 설명이 일목요연하게 나타나서 사용에 도움이 됩니다.
+
+TypeScript 에서는 이에 더해 `interface`, `type` 등의 선언 위에도 주석을 달 수 있습니다. 다만 TypeScript는 이미 매개변수의 타입과 반환 타입이 명시되어 있기 때문에 JSDoc 에서 타입 정보는 제거해야 합니다. 이를 일명 TSDoc 형태라 합니다.
+
+```ts
+/**
+ * Add the given two numbers
+ *
+ * @param a number to add
+ * @param b number to add
+ * @return  sum vbalue
+ */
+function sumTwo(a: number, b: number): number {
+  //....
+}
+```
+
+TypeScript 로 개발 시에는 TSDoc 형태를 사용해야 합니다. 매개변수와 반환 타입 정보는 이미 코드에 있기에 JSDoc 형태를 사용하는건 사족입니다. 나중에 코드 변경시 주석이 변경되지 않으면 혼동의 우려가 있습니다.
+
+#### Rule CM-1-2(필수): 한 줄 주석은 `//`을 사용하세요
+
+일관된 주석 스타일을 위해 주석이 한 줄 일때는 `//` 를 사용하시고, 여러 줄일때는 `/* ... */` 주석을 사용하세요. 단 1~2 줄일때는 `//` 사용도 팀 내 협의가 된다면 사용 가능합니다.
+
+```ts
+// 이것은 한 줄 주석입니다.
+
+// 팀 내 협의만 된다면
+// 이 주석도 한 줄 주석 기호를 사용해도 됩니다.
+
+/*
+이것은 블록 주석(Block Comment)인데요.
+여러 줄의 주석을 달 때 사용합니다.
+분량 채우려니 힘들지만 이해해주세요.
+*/
+
+/* 이 주석은 // 을 사용하는게 좋습니다 */
+```
+
+#### Rule CM-1-3(권장): 주석은 데코레이터 위에 다세요.
+
+클래스나 메서드, 속성에는 `@Component`, `@Injectable`과 같은 데코레이터가 올 수 있습니다. 여기에 주석을 달아야 한다면 데코레이터 위에 다시기 바랍니다.
+
+```ts
+// 좋지 않은 예
+@Injectable()
+/** 택배 로직을 처리하는 서비스 */
+class ParcelService {
+  // ...
+}
+
+// 좋은 예
+
+/** 택배 로직을 처리하는 서비스 */
+@Injectable()
+class ParcelService {
+  // ...
+}
+```
+
+#### Rule CM-1-4(권장): 불필요한 블록 태그는 사용하지 마세요.
+
+`@return`, `@param` 같은 것을 JSDoc에서 블록 태그(Block Tag)라고 합니다. TSDoc은 JSDoc을 기반으로 하기에 JSDoc이 지원하는 블록 태그는 다 사용할 수 있지만, 이 중 타입 정보를 표기하거나 TypeScript 문법이 이를 대신하는 블록 태그는 사용하지 마시기를 권장합니다. 소스코드와 불일치하면 코드를 읽을때 혼동스러울 수 있습니다.
+
+이 중 몇 가지만 들어보겠습니다.
+
+- `@enum`: TypeScript가 해당 문법 지원
+- `@implements`: TypeScript가 해당 문법 지원
+- `@type`: TypeScript의 존재 이유
+- `@typedef`: TypeScript의 존재 이유
+- `@private`, `@protected`, `@public`: TypeScript 에서 해당 문법 지원
+
+#### Rule CM-1-5(참고): 권장 블록 태그는 적극적으로 사용하세요.
+
+다음 블록 태그는 적극적으로 사용하시기 바랍니다.
+
+- `@param`: 매개변수를 설명할 때
+- `@return`: 반환 값 설명할 때
+- `@remarks`: 상세 설명을 추가할 때
+- `@example`: 코드 예제를 포함할 때
+- `@deprecated`: 해당 기능(함수, 클래스 등)이 더 이상 사용되지 않음을 표시할 때
+- `@throws`: 예외가 발생할 가능성이 있을 때
+- `@see`: 관련 문서 또는 함수를 참조할 때
+
+#### Rule CM-1-6(참고): JSDoc(TSDoc)은 마크다운 형식을 따릅니다.
+
+JSDoc은 내부적으로 마크다운 형식을 따릅니다. 이 사실을 알지 못하면 주석에서 여러 줄을 표시할 때 가장 문제를 많이 냅니다.
+
+```ts
+/**
+ * 이 함수는 다음의 경우에 사용됩니다.
+ * A와 B가 같을 경우: 전체 운송료 계산
+ * A와 B가 다를 경우: B를 재외한 운송료 계산
+ */
+```
+
+이 경우 실제 툴팁 렌더링은 아래와 같이 나옵니다.
+
+```
+이 함수는 다음의 경우에 사용됩니다.A와 B가 같을 경우: 전체 운송료 계산 A와 B가 다를 경우: B를 재외한 운송료 계산
+```
+
+온전히 툴팁이 렌더링이 되도록 마크다운 문법을 사용해주세요.
+
+```ts
+/**
+ * 이 함수는 다음의 경우에 사용됩니다.
+ *
+ * - A와 B가 같을 경우: 전체 운송료 계산
+ * - A와 B가 다를 경우: B를 재외한 운송료 계산
+ */
+```
+
+## 11. 전역, 모듈 및 소스 코드(SC)
 
 ### 11.1 일반
 
@@ -1561,6 +1762,27 @@ TODO
 - 특정 위치에 빈 줄 넣기
 
 등등 코드 스타일을 정의하자면 여기서 언급하기 힘들 정도로 많습니다. 이 코드 스타일은 팀 혹은 레포 레벨에서 통일되어야 합니다. 일관되지 않은 코드 스타일로는 협업이 어렵습니다.
+
+#### Rule SC-1-2(필수): `namespace`를 사용하지 마세요.
+
+TypeScript의 namespace는 원래 ES6 모듈(import/export)이 없던 시절, 전역 네임스페이스 오염을 막기 위해 사용되었습니다. 하지만 ES6 모듈(import / export)이 등장하면서 필요성이 사라졌습니다.
+
+```ts
+namespace Fax {
+  export function send(title: string, path: string): boolean {
+    // ....
+  }
+}
+
+// 사용법
+Fax.send('안녕하세요', './resume.ttf');
+```
+
+게다가 사용하지 말아야 할 이유는 몇 가지 더 있습니다.
+
+- Tree Shaking 불가: `namespace`는 JavaScript로 컴파일(혹은 트랜스파일) 되었을 때 즉시 실행 함수(IIFE) 형태로 남아있습니다. 즉 최적화가 어렵고 코드베이스가 커지게 됩니다.
+- ES6 모듈 시스템과 비호환: `namespace`는 TypeScript에만 있는 기능입니다. 또한 ES6 모듈 시스템이 완벽하게 대체가능합니다.
+- `import` 없이 전역적으로 접근 가능: 전역적으로 접근 가능하기에 관리가 어려울 수 있습니다. 반면 ES6 모듈 시스템은 `import/export`를 사용해 코드 분리가 가능합니다.
 
 ### 11.2 Import
 
