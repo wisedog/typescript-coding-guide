@@ -300,7 +300,54 @@ TODO
 
 ### 2.4 any
 
-TODO
+#### Rule TP-4-1(필수): `any`를 가능하면 사용하지 마세요
+
+`any`타입은 뜻 그대로 어떠한 타입이든 허용하는 타입으로 TypeScript의 타입 체크를 완전히 우회합니다. 타입을 집합으로 생각할때 `any`타입은 다른 모든 타입의 상위 집합, 즉 전체 집합입니다. 또한 모든 속성을 역참조할 수 있습니다. 그렇기에 `any`는 TypeScript에서 가장 유연하면서 가장 위험한 타입입니다.
+
+타입을 통해 안정성을 높이기 위한 TypeScript 이렇게 위험한 타입이 왜 들어왔을까요? TypeScript는 기본적으로 타입이 없는 기존 JavaScript에 타입 정보를 넣음으로서 컴파일 타임에 최대한 버그를 잡고 프로그램의 안정성을 높이고자 만들어졌습니다. 기존 방대한 JavaScript 프로젝트의 변수, 매개변수, 함수에 하나하나 타입을 달아야지 동작했다면 아마 TypeScript는 시작도 못하고 역사 속으로 사라졌을겁니다.
+
+기존 시스템을 개선하는 것이 주목적인 이유 때문에 TypeScript 의 타입 시스템은 다른 강타입 언어와는 달리 있어도 되고 없어도 되기에 선택적입니다. 일부에만 적용하면서 점점 늘려나갈 수 있기 때문에 점진적이기도 합니다. 이 점진적 적용에 JavaScript와 TypeScript를 이어주는 핵심이 바로 `any` 타입입니다.
+
+다만 이 점진적 적용이 끝난 TypeScript 프로젝트에서는 적극적으로 `any` 사용을 피해야합니다. TypeScript는 타입 체크를 하지 않기 때문에 결과를 예상하기 힘들며 런타임에서 버그가 발생할 가능성이 높아집니다. 제일 큰 문제는 `any`의 전파력입니다.
+
+```ts
+let a: any;
+let b: number;
+
+const c = a + b; // c는 any
+```
+
+`a`와 `b`를 더한 `c`를 반환하는 코드인데, 여기서 `a`가 `any`타입이기 때문에 TypeScript는 `c`의 타입을 `any`로 추론합니다. 이렇게 `any`와 엮이게 되면 타입 추론을 할 수 없고 이 값이 여기저기 쓰이게 되면 시스템 전반적으로 타입 추론을 할 수 없게 되며 결국 TypeScript의 타입 시스템이 무력화되는 결과로 이어집니다.
+
+그렇기에 `any`는 가능하면 사용하지 마시기 바립니다.
+
+#### Rule TP-4-2(필수): `any`를 사용해야 하는 코드가 있다면 린트 경고를 끄고 사유를 적으세요.
+
+`any`는 TypeScript 프로젝트에서는 사용하지 말아야 하지만, 가끔씩은 불가피하게 사용해야 할 경우가 있습니다. `any`사용 불가 린트 규칙이 있다면 이 경우는 에러를 내 않도록 설정해주시고, 사유를 적으세요.
+
+```ts
+// 뫄뫄한 이유로 any 사용
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let k: any;
+```
+
+#### Rule TP-4-3(필수): `any`보다는 `unknown`을 사용하세요.
+
+`unknown`은 `any`처럼 모든 타입 할당이 가능하지만, 외부에서 입력된 데이터나 API의 응답값 같이 해당 데이터의 타입이 확실하지 않을때 사용합니다. `any`와 다른 점은 `unknown` 타입은 역참조를 허용하지 않기 때문에(즉 사용하지 못하기 때문에) 반드시 타입 변환이 필요하다는 점입니다. 이는 코드 안정성을 높이며 버그 가능성을 줄여줍니다.
+
+```ts
+let helloAny: any = 'Hello';
+let helloUnknown: unknown = 'Hello';
+
+console.log(helloAny.toUpperCase()); // 문제 없지만 위험
+console.log(helloUnknown.toUpperCase()); // 타입검사가 없어서 에러
+
+if (typeof helloUnknown === 'string') {
+  console.log(helloUnknown.toUpperCase()); // 사용 가능
+}
+```
+
+결론적으로 정확한 타입을 알 수 없지만, 타입 검사를 강제하고 싶을 때 unknown을 사용하면 좋습니다.
 
 ### 2.5 타입 좁히기
 
@@ -500,6 +547,78 @@ class Foo {
 
   add(a: number, b: number): number {} // public
   public multiply(a: number, b: number): number {} // public
+}
+```
+
+#### Rule CL-1-3(필수): `toString()`를 가능하면 재정의하지 마세요.
+
+`toString()`는 `Object`의 메서드입니다. 클래스도 `Array`, `Map`과 같이 `Object`의 하위 클래스이기 때문에 `toString()`을 사용합니다. 하지만 실질적으로 `toString()` 메서드를 직접 부르는 코드는 거의 보지 못하셨을겁니다. JavaScript는 문자열이 있어야 할 곳에서 객체를 마주치면 내부적으로 자동으로 이 메서드를 호출하기 때문입니다.
+
+클래스에서는 특히 이 `toString()`을 손쉽게 재정의할 수 있으며 `Array`나 `Map`등과는 달리 클래스 자체 멤버 변수의 값을 일목 요연하게 보고싶은 경우가 많기 때문에 자주 재정의하는 편이라 주의가 필요합니다. `toString()` 메서드는 언제나 호출이 성공해야 하며 특별한 부수작용이나 무한루프가 있어서는 안됩니다.
+
+`toString()`을 잘못 재정의 했을때 겪을 수 있는 문제는 여러가지가 있지만 그 중 하나는 `JSON.stringify()` 문제입니다. `toString()`의 반환값을 JSON 형태로 한다고 해도 `JSON.stringify()`을 통한 결과값과는 다릅니다. `JSON.stringify()`는 `toString()`을 사용하지 않기 때문입니다.
+
+```ts
+class User {
+  constructor(public name: string, public address: string) {}
+
+  toString() {
+    return `{ "name": "${this.name} 님", "address": "대한민국 ${this.address}"`;
+  }
+}
+
+const user = new User('Kim', '대전시');
+console.log(JSON.stringify(product)); // {"name":"Kim","address":"대전시"}"
+```
+
+이 경우는 `toJSON()` 메서드를 재정의하세요.
+
+```ts
+class User {
+  constructor(public name: string, public address: string) {}
+
+  toJSON() {
+    return { name: this.name + ' 님', address: '대한민국 ' + this.address };
+  }
+}
+
+const user = new User('Kim', '대전시');
+console.log(JSON.stringify(product)); // {"name":"Kim 님","address":"대한민국 대전시"}
+```
+
+#### Rule CL-1-4(권장): 빈 생성자는 생략하세요.
+
+ES2015 이상에서는 클래스 생성자가 명시되지 않은 경우 기본 클래스 생성자를 제공하기 때문에 빈 생성자나 단순히 상위 클래스에 위임하는 생성자(즉 `super`만 있는 경우)는 생성자를 만들 필요가 없습니다.
+
+```ts
+class Foo {
+  constructor() {} // ❌ 빈 생성자
+}
+
+class Child {
+  consturctor(value: number) {
+    super(value); // ❌ super 만 있음
+  }
+}
+```
+
+그러나 멤버 변수 선언, `public` 접근 제어자가 아닌 경우, 매개변수에 데코레이터가 붙은 경우는 생성자 본문이 비어있더라도 생략해서는 안됩니다.
+
+```ts
+class Foo {
+  // ✅ 생성자가 없음
+}
+
+class Foo1 {
+  constructor(private readonly parcelService) {} // ✅ 멤버 변수 선언
+}
+
+class Foo2 {
+  constructor(@Injectable myService) {} // ✅ 데코레이터
+}
+
+class Foo3 {
+  private constructor() {} // ✅ public 이 아닌 생성자
 }
 ```
 
@@ -710,6 +829,41 @@ console.log(a);
 ```
 
 위 코드에서 `b.shift()`는 `[1]`을 반환하며 `[1]`에 또 다시 `shift()`를 실행하면 `[]`이 됩니다. `a`에는 영향이 없을 걸로 생각할 수 있지만 `b.shift()` 첫 번째에서 `[1]`의 참조를 반환하고 이는 곧 `a[0]`의 참조입니다. 이 참조에서 `shift()`를 통해 첫 번째 요소를 제거하게 되면 `a`의 값인 `1`이 제거됩니다.
+
+#### Rule EX-1-9(참고): 객체 인스턴스 생성 이후에 속성을 추가하거나 제거하지 마세요.
+
+JavaScript 엔진은 객체를 히든 클래스(Hidden Class)라는 내부 데이터 구조로 관리합니다. JavaScript는 동적 타이핑 언어다보니 런타임에서 데이터의 타입이 정해집니다. 이 때문에 객체 인스턴스의 경우 속성에 접근하는 속도면에서 정적 타이핑 언어와 비교했을 때 불리합니다. 객체의 속성은 메모리 오프셋 값으로 접근하는데 컴파일 타임에 메모리 오프셋이 결정되는 정적 타이핑 언어와는 달리 동적 타이핑 언어는 런타임에 타입이 결정되서 이 값을 미리 알 방법이 없기 때문에 속성에 접근할 때마다 동적 탐색(dynamic lookup)을 해야합니다.
+
+동적 탐색은 비용이 많이 들지만 동적 타이핑 언어에서는 피할수가 없습니다. 다만 Node.js 와 크롬의 근간을 이루는 `V8` JavaScript 엔진은 동적 탐색을 피하고 성능을 높이기 위해 히든 클래스(Hidden Class) 기법으로 객체를 관리합니다. (다른 JavaScript 엔진의 동작은 잘 모르겠습니다 😅)
+
+```ts
+class User {
+  constructor(name: string, address: string) {}
+}
+
+const user1 = new User('김씨', '대전광역시'); // Hidden Class #1
+const user2 = new User('박씨', '광주광역시'); // Hidden Class #1 (재사용)
+```
+
+위에서 `user1`, `user2`는 같은 히든 클래스를 사용합니다. 흡사 같은 틀을 사용하는 붕어빵이라고 보면 되겠습니다. 그렇기에 `user1.address` 접근은 기존에 만들어놓은 히든 클래스의 오프셋을 이용해서 바로 접근 가능합니다.
+
+그런데, 여기서 동적으로 속성을 추가/삭제함으로서 위의 `User`의 히든 클래스의 틀이 깨진다면 어떻게 될까요? 어 저는 꼬리 없는 붕어빵이요. 저는 지느러미 없는 붕어빵이요. 주문이 들어올 때마다 틀을 다시 만들어야 합니다. 즉 새로운 히든 클래스를 만들게 되면 JIT 컴파일러가 최적화했던 코드를 다시 분석하며 이 과정에서 성능 저하가 발생합니다. 
+
+```ts
+const user3 = new User('이씨', '부산광역시');
+(user3 as any).email = 'lee@foo.com'; // ❌ 새로운 속성이 추가되서 기존 히든클래스 무효화
+```
+
+TypeScript 코드에서는 동적으로 속성을 추가/삭제하는 일은 잘 없지만, 가장 문제되는 경우는 `Object`를 해시맵으로 사용하는 경우입니다. 속성을 추가할때마다 새로운 히든 클래스를 만들기에 성능 저하가 발생합니다.
+
+```ts
+const objDict = {};  // 새로운 히든 클래스 생성
+objDict.name = '한씨'; // 새로운 히든 클래스 생성
+objDict.email = 'email@email.com'; // 새로운 히든 클래스 생성
+objDict.age = 99; // 새로운 히든 클래스 생성
+```
+
+이는 뒤에 나오는 `SD-2-10(권장): 해시맵이 필요할 때 Object대신 Record 혹은 Map을 사용하세요.` 규칙을 참고하세요.
 
 ## 6. 문(Statement, ST)
 
@@ -1213,6 +1367,56 @@ class NotFoundException extends Error {}
 throw new NotFoundException('Not Found');
 new Promise((resolve, reject) => reject(new Error('hello')));
 ```
+
+#### Rule EH-1-3(권장): catch절의 매개변수 타입은 `unknown`으로 받으세요.
+
+위의 규칙 `EH-1-2`와 연관된 규칙입니다.
+
+TypeScript 4.0부터 `catch` 절의 `error` 타입이 기본적으로 `unknown`이 되었습니다. 이전에는 `any`였습니다. 이유는 JavaScript 에서 아무 값이나 `throw` 할 수 있기 때문에 `catch`절의 `error` 타입이 `Error` 혹은 `Error`의 하위 클래스가 아닐 수도 있기 때문입니다. 이 경우 타입을 `any`로 두면 안전하지 않습니다.
+
+```ts
+try {
+  throw 123; // 숫자를 throw
+} catch (error) {
+  console.log(error.toUpperCase()); // 런타임 에러 발생
+}
+```
+
+`any` 타입이면 어떤 속성이든 접근할 수 있지만, 실제로 해당 속성이 없으면 런타임 오류가 발생할 수 있습니다. 반면, `unknown`이면 반드시 타입 검사를 거쳐야 하므로 안전한 코드 작성이 가능합니다.
+
+```ts
+try {
+  throw new Error('뭔가 잘못되었다....');
+} catch (error: unknown) {
+  // unknown 타입
+  if (error instanceof Error) {
+    console.log(error.message); // 안전하게 이용 가능
+  } else {
+    console.log('Unknown Error', error);
+  }
+}
+```
+
+`tsconfig`에서 `useUnknownInCatchVariables`값이 `true`라면 `catch`절의 `error`타입을 `unknown`으로 명시하지 않으면 컴파일 에러가 발생합니다. `strict`옵션이 켜져있다면 자동으로 `true`값으로 지정됩니다. `false`라면 기존처럼 타입을 명시하지 않은, `any` 타입으로 사용할 수 있습니다.
+
+예외 값을 `Error` 혹은 그 하위 클래스로만 제한하는 규칙 `EH-1-2`이 엄격하게 적용된다면 아래와 같이 `error`값이 `Error` 클래스라고 가정하고 코딩하셔도 됩니다.
+
+```ts
+function assertIsError(e: unknown): asserts e is Error {
+  if (!(e instanceof Error)) {
+    throw new Error('e is not an Error');
+  }
+}
+
+try {
+  callSomeFunc();
+} catch (err: unknown) {
+  assertIsError(err);
+  console.error(err.message); // err이 Error라고
+}
+```
+
+다만 써드파티 라이브라리가 반드시 `Error`를 반환한다는 보장이 없으니 유연하게 대응하시면 됩니다.
 
 ## 9. 표준 내장 객체 및 함수(Standard Built-in Objects/Functions, SD)
 
