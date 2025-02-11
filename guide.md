@@ -109,18 +109,18 @@ const { some, _unused, variable } = obj;
 아래는 변수명으로서 안 좋은 예입니다.
 
 ```ts
-const whId = 1; // 내부에서만 사용하는 약어
-const n = 1; // 의미 없음
-const nErr = 1; // 모호한 약어
-const pcCounter = 1; // pc라는 약어에는 많은 의미가 있음
+const whId = 1; // ❌ 내부에서만 사용하는 약어
+const n = 1; // ❌ 의미 없음
+const nErr = 1; // ❌ 모호한 약어
+const pcCounter = 1; // ❌ pc라는 약어에는 많은 의미가 있음
 ```
 
 아래는 좋은 예입니다.
 
 ```ts
-const targetIp = '192.168.0.1'; // "IP"는 모두가 다 아는 약어
-const errorCount = 1; // 명확한 의미
-const warehouseId = 1; // 명확함
+const targetIp = '192.168.0.1'; // ✅ "IP"는 모두가 다 아는 약어
+const errorCount = 1; // ✅ 명확한 의미
+const warehouseId = 1; // ✅ 명확함
 ```
 
 예외: 10~15 줄 내의 작은 범위(Scope)에서 사용하거나 외부로 노출되지 않는 메서드, 변수의 인자명으로 쓸 경우 `n`, `i` 와 같이 짧은 변수명은 허용 가능하지만 해당 범위 내의 코드가 늘어날 경우 다시 의미가 모호해질 가능성이 있다는 점 유의하셔야 합니다.
@@ -176,8 +176,8 @@ function printLength(value: string) {
   console.log(value.length);
 }
 
-printLength('hello'); // 정상 동작
-printLength(new String('hello')); // 컴파일 에러
+printLength('hello'); // ✅ 정상 동작
+printLength(new String('hello')); // ❌ 컴파일 에러
 ```
 
 위 코드에서는 두 번째 `printLength()` 호출 시 컴파일 에러가 발생합니다. 이를 고치려면 아래와 같이 불필요하고 번거롭게 타입 정의를 해야합니다.
@@ -263,7 +263,7 @@ const y: number | undefined = undefined;
 타입 별칭(`type`)에 union 타입으로 `null`이나 `undefined`이 포함되서는 안됩니다.
 
 ```ts
-// 안 좋은 코드
+// ❌ 안 좋은 코드
 type OperationSystem = 'Windows' | 'MacOS' | 'Linux' | undefined;
 ```
 
@@ -296,7 +296,64 @@ function buyHoody(address?: string): void {
 
 ### 2.3 구조적 타입(Structural Type)
 
-TODO
+#### Rule TP-3-1(권장): 가능하면 `type` 대신 `interface`를 사용하세요.
+
+현재 TypeScript에서 `type`과 `interface`는 일면 비슷합니다. 하지만 버전 4.2 이전은 그렇지 않았습니다.
+
+TypeScript 4.2 버전 이전에는 타입 별칭 선언(type alias declaration)을 사용하면 `.d.ts`출력이 훨씬 더 커지는 문제가 있었습니다. 타입 별칭 선언은 경우에 따라 타입 별칭의 내용이 중복해서 인라인으로 처리하는 반면 인터페이스는 항상 이름으로 참조되기 때문이었습니다.
+
+현재는 `union`및 interchange 유형에 대한 유형 별칭을 보존하도록 수정했기 때문에 해당 문제는 사라졌고 일부 개발자들은 `interface`보다 `type`을 선호하기 시작했습니다.
+
+하지만 `type`보다 `interface`를 먼저 고려해야하는 건 교차(intersection) 타입을 정의 및 사용할 때 입니다.
+
+```ts
+interface A {
+  x: number;
+}
+
+interface B {
+  x: string;
+}
+
+interface C extends A, B {} // 에러 발생! (x의 타입 충돌)
+```
+
+`interface`는 속성 충돌을 감지하는 단일 평면 객체 유형을 생성합니다. 반면 type은 속성을 재귀적으로 병합할 뿐, 어떤 경우에는 `never`를 생성합니다.
+
+```ts
+type A = { x: number };
+type B = { x: string };
+
+type C = A & B; // x는 never
+```
+
+또한 `interface`의 타입 관계는 캐시되지만, 인터섹션 타입(`type & type`)은 전체를 다시 검사해야 합니다.
+
+```ts
+interface A {
+  foo: string;
+}
+
+interface B extends A {}
+
+const obj: B = { foo: 'hello' }; // 빠른 타입 검사 가능
+
+type A = { foo: string };
+type B = { foo: string };
+type C = A & B;
+
+const obj: C = { foo: 'hello' }; // 전체 타입을 다시 검사함
+```
+
+이 때문에 성능 문제가 있을 수 있습니다.
+
+이런 이유로 객체 타입 간의 교차 유형을 만들때는 `interface`를 사용하는게 좋습니다. 그리고 객체 타입 외 원시 타입, 튜플 타입, 객체 타입이 아닌 타입 간의 교차 타입은 타입 별칭을 사용하는게 좋습니다.
+
+#### Rule TP-3-2(권장): 구조적 타이핑은 가능하면 `class` 대신 `interface` 혹은 `type`을 사용하세요.
+
+`class`는 JavaScript, TypeScript 모두 지원하는 문법입니다. 따라서 TypeScript 를 컴파일해도 `class`는 그대로 결과물로 나온 `.js`파일에 들어갑니다. 하지만 `interface`나 `type`은 타입 정보만 담고 있기 때문에 컴파일하면 결과물로 나온 `.js`에 들어가지 않습니다.
+
+따라서 instanceof, 데코레이터나 리플렉션 등 런타임에서 해당 구조적 타입을 다룰 일이 있다면 사용해야하지만 단순히 구조적 타이핑 용도로만 사용한다면 `interface` 혹은 `type`을 사용하시기 바랍니다.
 
 ### 2.4 any
 
@@ -351,7 +408,14 @@ if (typeof helloUnknown === 'string') {
 
 ### 2.5 타입 좁히기
 
-TODO
+#### Rule TP-5-1(권장): `any`보다는 `any[]`, `Record`를 사용하세요.
+
+`any`타입은 집합으로 치자면 전체 집합입니다. 모든 타입을 커버할 수 있죠. 그래서 `any`를 사용하면 어떠한 타입 시스템도 동작하지 않습니다. 하지만 만약 어떤 값이 들어올지 모르는 배열이라면? 문자열 키를 가졌지만 어떤 값이 올지 모르는 객체라면 그래도 타입을 좁힐 수 있습니다.
+
+어떤 값이 들어올지 모르는 배열: `any[]`
+문자열 키를 가졌지만 어떤 값일지 모르는 객체: `Record<string, any>`
+
+이렇게 사용하면 IDE의 도움을 받을 수 있고 최소한의 타입 시스템이 동작하게 됨으로서 버그를 예방할 수 있습니다.
 
 ### 2.6 타입 추론(Type Inference)
 
@@ -622,6 +686,85 @@ class Foo3 {
 }
 ```
 
+#### Rule CL-1-5(권장): `#` private 접근 제어자를 사용하지 마세요.
+
+ES2020(ES11)부터 도입된 JavaScript의 Private 필드(#)은 외부에서 절대 접근할 수 없고 클래스 내부에서만 접근할 수 있는 접근 제어자입니다. 얼핏 `private`과 비슷하지만 내부 동작 방식은 많이 다릅니다.
+
+```ts
+class User {
+  #privateValue: number;
+  constructor(public name: string, public address: string) {}
+
+  getSecret(): number {
+    return this.#privateValue;
+  }
+}
+```
+
+위와 같은 `User` 클래스가 있습니다. 큰 문제는 없어 보입니다. 그냥 `private` 처럼 동작하는거 아닌가 싶습니다. 하지만 다시 말씀드리지만 TypeScript는 JavaScript로 컴파일하기 때문에 그 동작을 보려면 실제 JavaScript로 컴파일된 결과를 봐야합니다.
+
+```js
+use strict";
+var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, state, kind, f) {
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+};
+var _User_privateValue;
+class User {
+    constructor(name, address) {
+        this.name = name;
+        this.address = address;
+        _User_privateValue.set(this, void 0);
+    }
+    getSecret() {
+        return __classPrivateFieldGet(this, _User_privateValue, "f");
+    }
+}
+_User_privateValue = new WeakMap();
+```
+
+여기서 `#`을 사용하면 안되는 이유가 나옵니다.
+
+첫 번째로 `#` Private 필드는 클래스에 포함되지 않습니다. 즉 일반적인 객체처럼 객체 속성이어야 히든 클래스로 관리하는데 컴파일 한 결과는 `User` 클래스 외부에 `WeakMap`으로 정의되어 있습니다. 그렇기에 JavaScript 엔진이 `#` private 필드에 접근할 때는 일반적인 속성에 접근(예: this.propertyName) 할 때와는 달리 별도의 내부 매커니즘으로 호출해야기 때문에 성능이 저하됩니다.
+
+두 번째로 `#` private 필드는 위 코드에서 보듯이 객체 외부에 정의되기 때문에 객체의 프로토타입 체인에 존재하지 않게 됩니다. 이 때문에 리플렉션이나 디버깅이 어렵습니다. 객체의 속성이 아니기에 `Object.keys()`, `JSON.stringify()`에도 해당 필드는 나타나지 않습니다.
+
+세 번째로 일반적인 멤버와는 달리 별도의 `WeakMap`으로 관리하기 때문에 다량의 인스턴스를 만들 경우 일반적인 클래스보다 메모리 사용량이 증가합니다.
+
+절대 외부에 해당 속성을 노출시키지 않아야 할 특별한 이유가 없는한 `#`Private 접근 제어자를 사용하지 마세요.
+
+#### Rule CL-1-6(권장): 멤버 변수 선언 대신 생성자 매개 변수 선언을 적극 활용하세요.
+
+TypeScript에서는 클래스 멤버 변수 선언 대신 생성자 매개 변수로 멤버 변수 선언이 가능합니다.
+
+```ts
+class User {
+  name: string;
+  address: string;
+
+  constructor(name: string, address: string) {
+    this.name = name;
+    this.address = address;
+  }
+}
+```
+
+위 코드는 일반적인 클래스 사용법입니다. 멤버 변수를 선언하고 생성자에서 값을 초기화합니다.
+
+```ts
+class User {
+  constructor(name: string, address: string, private readonly age: number) {}
+}
+```
+
+위 코드는 생성자 매개변수를 통해 멤버 변수를 선언하는 방식입니다. 이 방식을 사용하면 멤버 변수 선언과 초기화를 한 번에 함으로서 코드가 깔끔해지기도 하고 `public`, `private`, `readonly` 등의 접근 제한자와 함께 사용할 수 있습니다.
+
+다만 아래의 경우에는 굳이 사용하실 필요는 없습니다.
+
+- 생성자 로직이 복잡한 경우
+- 기본 값이 필요한 경우
+
 ## 5. 표현식(Expression, EX)
 
 ### 5.1 일반
@@ -847,7 +990,7 @@ const user2 = new User('박씨', '광주광역시'); // Hidden Class #1 (재사�
 
 위에서 `user1`, `user2`는 같은 히든 클래스를 사용합니다. 흡사 같은 틀을 사용하는 붕어빵이라고 보면 되겠습니다. 그렇기에 `user1.address` 접근은 기존에 만들어놓은 히든 클래스의 오프셋을 이용해서 바로 접근 가능합니다.
 
-그런데, 여기서 동적으로 속성을 추가/삭제함으로서 위의 `User`의 히든 클래스의 틀이 깨진다면 어떻게 될까요? 어 저는 꼬리 없는 붕어빵이요. 저는 지느러미 없는 붕어빵이요. 주문이 들어올 때마다 틀을 다시 만들어야 합니다. 즉 새로운 히든 클래스를 만들게 되면 JIT 컴파일러가 최적화했던 코드를 다시 분석하며 이 과정에서 성능 저하가 발생합니다. 
+그런데, 여기서 동적으로 속성을 추가/삭제함으로서 위의 `User`의 히든 클래스의 틀이 깨진다면 어떻게 될까요? 어 저는 꼬리 없는 붕어빵이요. 저는 지느러미 없는 붕어빵이요. 주문이 들어올 때마다 틀을 다시 만들어야 합니다. 즉 새로운 히든 클래스를 만들게 되면 JIT 컴파일러가 최적화했던 코드를 다시 분석하며 이 과정에서 성능 저하가 발생합니다.
 
 ```ts
 const user3 = new User('이씨', '부산광역시');
@@ -857,13 +1000,32 @@ const user3 = new User('이씨', '부산광역시');
 TypeScript 코드에서는 동적으로 속성을 추가/삭제하는 일은 잘 없지만, 가장 문제되는 경우는 `Object`를 해시맵으로 사용하는 경우입니다. 속성을 추가할때마다 새로운 히든 클래스를 만들기에 성능 저하가 발생합니다.
 
 ```ts
-const objDict = {};  // 새로운 히든 클래스 생성
+const objDict = {}; // 새로운 히든 클래스 생성
 objDict.name = '한씨'; // 새로운 히든 클래스 생성
 objDict.email = 'email@email.com'; // 새로운 히든 클래스 생성
 objDict.age = 99; // 새로운 히든 클래스 생성
 ```
 
 이는 뒤에 나오는 `SD-2-10(권장): 해시맵이 필요할 때 Object대신 Record 혹은 Map을 사용하세요.` 규칙을 참고하세요.
+
+#### Rule EX-1-10(필수): `==` 대신 `===`을 사용하세요.
+
+JavaScript에서는 다른 프로그래밍 언어에도 있는 연산자인 `==` 연산자가 존재합니다. 거기에 덧붙여 `===` 연산자도 있습니다. `==`는 `비교 연산자(Equality)`라 부르며 `===`는 `엄격한 비교 연산자(Strict equality)`라고 합니다. 문젠 `=` 하나 차이인데 두 연산자의 동작이 매우 다릅니다.
+
+`==`는 타입을 자동 변환해서 비교하지만, `===`는 타입 변환 없이 값과 타입을 모두 비교합니다. 이 자동 변환 과정때문에 프로그래머가 예상치 못한 결과를 받아볼 수 있습니다.
+
+```ts
+console.log(false == ''); // true  -> 빈 문자열은 false로 변환
+console.log(false === ''); // false -> 다른 타입
+
+console.log(0 == '0'); // true  -> 타입 변환 발생
+console.log(0 === '0'); // false -> 다른 타입
+
+console.log(null == undefined); // true  -> 둘 다 "없음"을 의미한다고 간주
+console.log(null === undefined); // false -> 다른 타입
+```
+
+따라서 언제나 `===`을 사용하세요. `==`와 `===`의 비교표는 이 [링크](https://dorey.github.io/JavaScript-Equality-Table/)를 참고하세요.
 
 ## 6. 문(Statement, ST)
 
@@ -1104,7 +1266,7 @@ const switchExample = (user: User): string => {
 
 ```ts
 for (const prop in fooObj) {
-  // prop 은 부모 프로토타입일 수 있습니다
+  // ❌ prop 은 부모 프로토타입일 수 있습니다
 }
 ```
 
@@ -1303,7 +1465,7 @@ function someFunc(p1: Foo, p2: Foo): number {
   return p1.a + p1.a;
 }
 
-console.log(bar, bar2); // bar.a의 값 변경: { "a": -1, "b": 1 }, { "a": 5, "b": 5 }
+console.log(bar, bar2); // ❌bar.a의 값 변경: { "a": -1, "b": 1 }, { "a": 5, "b": 5 }
 ```
 
 JavaScript와 달리 TypeScript에서는 `Readonly<T>` 유틸리티 타입을 사용하면 호출한 함수 내에서 매개 변수를 변경하지 못하게 할 수 있습니다. 이런 경우 매개 변수는 불변을 유지할 수 있기 때문에 예상치 못한 부작용을 막을 수 있습니다.
@@ -1378,7 +1540,7 @@ TypeScript 4.0부터 `catch` 절의 `error` 타입이 기본적으로 `unknown`�
 try {
   throw 123; // 숫자를 throw
 } catch (error) {
-  console.log(error.toUpperCase()); // 런타임 에러 발생
+  console.log(error.toUpperCase()); // ❌ 런타임 에러 발생
 }
 ```
 
@@ -1412,7 +1574,7 @@ try {
   callSomeFunc();
 } catch (err: unknown) {
   assertIsError(err);
-  console.error(err.message); // err이 Error라고
+  console.error(err.message); // err이 Error라고 간주
 }
 ```
 
@@ -1424,7 +1586,10 @@ try {
 
 #### Rule SD-1-1(필수): Deprecated 되거나 구식 기능을 사용하지 마세요.
 
-TODO
+JavaScript 표준이 아니거나, 지원이 중단된 기능을 사용하지 마세요.
+
+- `with`문과 같이 더 이상 지원하지 않는 기능은 [MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Deprecated_and_obsolete_features)에서 확인하실 수 있습니다.
+- TC39에서 제안되었지만 아직 정식 기능이 아닌 기능을 사용하지 마세요. 2025.02.11 기준으로 예를 들면 `Temporal`이 있습니다.
 
 ### 9.2 표준 내장 객체
 
@@ -1526,7 +1691,7 @@ const b = [2, 3];
 ```ts
 const someNumbers = [1, 2, 3];
 const result = someNumbers.forEach((num) => {
-  return num * 2;
+  return num * 2; // ❌ 값 반환
 });
 ```
 

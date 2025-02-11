@@ -2,7 +2,7 @@
 
 ## 개요
 
-본 문서는 TypeScript와 TypeScript의 뿌리인 JavaScript에 대한 코딩 가이드라인에 대해 정리한 문서입니다. TypeScript의 기능만으로는 절대 하나의 실행 가능한 프로그램을 만들 수 없기에, TypeScript 뿐만 아니라 JavaScript의 코딩 가이드라인로 같이 담았습니다.
+본 문서는 TypeScript와 TypeScript의 뿌리인 JavaScript에 대한 코딩 가이드라인에 대해 정리한 문서입니다. TypeScript의 기능만으로는 절대 하나의 실행 가능한 프로그램을 만들 수 없기에, TypeScript 뿐만 아니라 JavaScript의 코딩 가이드라인으로 함께 담았습니다.
 
 하나의 동작 가능한 프로그램을 위해 필요한 가장 작은 단위인 식별자, 타입부터 시작하여 표현식, 문, 함수 순으로 가이드라인을 작성했습니다.
 
@@ -43,9 +43,18 @@ PR을 올려주시거나 `Discussions` 메뉴을 통해서 수정, 추가 규칙
 타입스크립트(x), TypeScript(O)
 ```
 
-- 용어는 [MDN 용어 가이드](https://github.com/mdn/translated-content/blob/main/docs/ko/guides/glossary-guide.md)에 따릅니다.
+- 용어는 기본적으로 [MDN 용어 가이드](https://github.com/mdn/translated-content/blob/main/docs/ko/guides/glossary-guide.md)를 따릅니다.
+- 위 용어 가이드 중 아래 용어는 재정의(Override)합니다
+
+```
+type: 형 -> 타입
+error: 오류 -> 에러
+syntax: 구문 -> 문법
+```
 
 ## 전체 규칙 목록
+
+총 80개의 규칙이 있습니다.
 
 1. 식별자(Identifier)
 
@@ -63,9 +72,12 @@ PR을 올려주시거나 `Discussions` 메뉴을 통해서 수정, 추가 규칙
 - TP-2-1(필수): `undefined`과 `null`을 구분해서 사용하세요.
 - TP-2-2(필수): 타입 별칭에 `null`이나 `undefined`을 포함하지 마세요.
 - TP-2-3(필수): `| undefined` 대신 `?`을 사용하세요
+- TP-3-1(권장): 가능하면 `type` 대신 `interface`를 사용하세요.
+- TP-3-2(권장): 구조적 타이핑은 가능하면 `class` 대신 `interface` 혹은 `type`을 사용하세요.
 - TP-4-1(필수): `any`를 가능하면 사용하지 마세요.
 - TP-4-2(필수): `any`를 사용해야 하는 코드가 있다면 린트 경고를 끄고 사유를 적으세요.
 - TP-4-3(필수): `any`보다는 `unknown`을 사용하세요.
+- TP-5-1(권장): `any`보다는 `any[]`, `Record`를 사용하세요.
 - TP-6-1(권장): `string`, `boolean`, `number`, `new` 표현식으로 초기화된 변수나 매개변수에 대한 타입 명시는 생략합니다.
 - TP-6-2(필수): 반환 타입을 명시하세요
 
@@ -81,6 +93,8 @@ PR을 올려주시거나 `Discussions` 메뉴을 통해서 수정, 추가 규칙
 - CL-1-2(권장): `public` 접근 제어자에 일관성이 있어야 합니다.
 - CL-1-3(필수): `toString()`를 가능하면 재정의하지 마세요.
 - CL-1-4(권장): 빈 생성자는 생략하세요.
+- CL-1-5(권장): `#` private 접근 제어자를 사용하지 마세요.
+- CL-1-6(권장): 멤버 변수 선언 대신 생성자 매개 변수 선언을 적극 활용하세요.
 
 5. 표현식(Expression)
 
@@ -93,6 +107,7 @@ PR을 올려주시거나 `Discussions` 메뉴을 통해서 수정, 추가 규칙
 - EX-1-7(필수): 전개 연산자 사용 시 같은 타입에 사용하세요.
 - EX-1-8(필수): 다차원 배열을 전개 연산자의 피연산자로 사용하지 마세요.
 - EX-1-9(참고): 객체 인스턴스 생성 이후에 속성을 추가하거나 제거하지 마세요.
+- EX-1-10(필수): `==` 대신 `===`을 사용하세요.
 
 6. 문(Statement)
 
@@ -123,6 +138,7 @@ PR을 올려주시거나 `Discussions` 메뉴을 통해서 수정, 추가 규칙
 
 9. 표준 내장 객체 및 함수(Standard Built-in Objects/Functions)
 
+- SD-1-1(필수): Deprecated 되거나 구식 기능을 사용하지 마세요.
 - SD-2-1(필수): `Array.prototype.map()`은 호출한 `Array`의 요소의 값 만 변경시켜야 합니다.
 - SD-2-2(필수): `Array.prototype.map()`의 반환 값을 반드시 사용하세요
 - SD-2-3(필수): `Array` 생성자를 사용하지 마세요
