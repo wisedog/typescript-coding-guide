@@ -13,7 +13,7 @@
 3. 선언과 정의(Declaration and Definition)
 4. 클래스(Class)
 5. 표현식(Expression)
-6. 문(Statement)
+6. 문법(Statement)
 7. 함수(Functions)
 8. 에러 처리(Error Handling)
 9. 표준 내장 객체 및 함수(Standard Built-in Objects/Functions)
